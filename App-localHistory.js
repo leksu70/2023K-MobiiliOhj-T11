@@ -1,49 +1,25 @@
 import { StatusBar } from 'expo-status-bar';
 import { Button, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useState, useRef, useEffect } from 'react';
-import * as SQLite from 'expo-sqlite';
+import { useState, useRef } from 'react';
 
-const db = SQLite.openDatabase('history.db');
+var counter = 0;
 
 export default function App() {
   const [product, setProduct] = useState('');
   const [amount, setAmount] = useState('');
   const [history, setHistory] = useState([]);
 
+  
   const initialFocus = useRef(null);
 
-  useEffect( () => {
-    db.transaction( tx => {
-      tx.executeSql('create table if not exists history (id integer primary key not null, product text, amount text);');
-    }, null, updateList);
-    initialFocus.current.focus();
-  }, []);
-
-  useEffect( () => {
+  const saveHistory = () => {
+    counter += 1;
+    setHistory( [ { id: counter, product: product, amount: amount}, ...history] ); // Lisätään alkuun
+    
     setProduct('');
-    initialFocus.current.focus();
     setAmount('');
-  }, [history]);
-
-  const saveItem = () => {
-    db.transaction( tx => {
-      tx.executeSql('insert into history (product, amount) values (?, ?);', [product, amount]);
-    }, null, updateList)
+    initialFocus.current.focus();
   };
-
-  const updateList = () => {
-    db.transaction( tx => {
-      tx.executeSql('select * from history;', [], (_, { rows }) => 
-        setHistory(rows._array)
-      );
-    }, null, null);
-  };
-
-  const deleteItem = (id) => {
-    db.transaction( tx => {
-      tx.executeSql('delete from history where id = ?;', [id]);}, null, updateList
-    )
-  }
 
   return (
     <View style={ styles.container }>
@@ -60,18 +36,16 @@ export default function App() {
         placeholder={'Amount'}
         style={ styles.input }
       />
-      <Button title='SAVE' onPress={ saveItem } />
-      
+      <Button title='SAVE' onPress={ saveHistory } />
+      <Text>product: { product }  amount: { amount } </Text>
+      <Text></Text>
       <Text style={ styles.title }>Shopping list</Text>
-
       <FlatList
         data={ history }
-        keyExtractor={ item => item.id.toString() }
         renderItem={ ({ item }) =>
-          <View style={ styles.listcontainer }>
-            <Text>{ item.product }, { item.amount}</Text>
-            <Text style={{ color: '#0000ff' }} onPress={ () => deleteItem(item.id) }>    bought</Text>
-          </View>
+          <Text style={ styles.text }>
+            { item.product } { item.amount} { item.id }
+          </Text>
         }
       />
       
@@ -101,9 +75,5 @@ const styles = StyleSheet.create({
   },
   text: {
     fontWeight: 'bold',
-  },
-  listcontainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  }
 });
